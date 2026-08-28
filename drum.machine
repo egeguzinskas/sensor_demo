@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Learn HTML, CSS & JavaScript Drum Machine</title>
+
+<style>
+/* ======================================================
+   CSS = HOW THINGS LOOK
+   Try changing colors, sizes, borders, spacing, etc.
+====================================================== */
+
+*{
+    box-sizing:border-box;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    text-align:center;
+}
+
+header{
+    padding:20px;
+    background:#222;
+}
+
+h1{
+    margin:0;
+}
+
+#lesson{
+    background:#1b1b1b;
+    padding:15px;
+    border-top:3px solid #4CAF50;
+    border-bottom:3px solid #4CAF50;
+    min-height:90px;
+    line-height:1.6;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(3,150px);
+    gap:20px;
+    justify-content:center;
+    margin:40px auto;
+}
+
+.pad{
+    height:150px;
+    border:none;
+    border-radius:15px;
+    background:#333;
+    color:white;
+    font-size:22px;
+    cursor:pointer;
+    transition:.1s;
+}
+
+.pad:hover{
+    background:#444;
+}
+
+.pad:active,
+.pad.playing{
+    background:#4CAF50;
+    transform:scale(.95);
+}
+
+footer{
+    padding:20px;
+    opacity:.7;
+}
+
+code{
+    color:#7CFF7C;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- =====================================================
+HTML = THE STRUCTURE
+Everything you see on the page is HTML.
+====================================================== -->
+
+<header>
+    <h1>🥁 Learn Web Development Drum Machine</h1>
+    <p>Click a pad or press A S D F G H</p>
+</header>
+
+<div id="lesson">
+Loading lesson...
+</div>
+
+<div class="grid">
+
+    <!-- data-key stores information JavaScript can read -->
+    <button class="pad" data-key="a">A<br>Kick</button>
+    <button class="pad" data-key="s">S<br>Snare</button>
+    <button class="pad" data-key="d">D<br>Hi Hat</button>
+    <button class="pad" data-key="f">F<br>Tom</button>
+    <button class="pad" data-key="g">G<br>Clap</button>
+    <button class="pad" data-key="h">H<br>Cowbell</button>
+
+</div>
+
+<footer>
+Experiment! Change colors, text, or add new buttons.
+</footer>
+
+<script>
+
+/* ======================================================
+JAVASCRIPT = MAKES THINGS HAPPEN
+====================================================== */
+
+
+/* Lessons shown while you play */
+
+const lessons = [
+
+`<h2>Lesson 1</h2>
+HTML creates the page.<br>
+The drum pads are <code>&lt;button&gt;</code> elements.`,
+
+`<h2>Lesson 2</h2>
+CSS styles the page.<br>
+Try changing <code>background:#111;</code> to another color.`,
+
+`<h2>Lesson 3</h2>
+JavaScript reacts to events.<br>
+When you click a pad, JavaScript runs a function.`,
+
+`<h2>Lesson 4</h2>
+Variables store information.<br>
+Example:<br>
+<code>const number = 10;</code>`,
+
+`<h2>Lesson 5</h2>
+Functions group instructions.<br>
+Example:<br>
+<code>playSound()</code>`,
+
+`<h2>Lesson 6</h2>
+Arrays store lists.<br>
+The lesson messages are stored inside an array.`,
+
+`<h2>Lesson 7</h2>
+Loops repeat work.<br>
+You could loop over every drum pad.`,
+
+`<h2>Lesson 8</h2>
+The DOM is the webpage.<br>
+JavaScript changes it with:<br>
+<code>element.innerHTML = "Hello"</code>`,
+
+`<h2>Lesson 9</h2>
+Events include clicks and key presses.<br>
+<code>addEventListener()</code> listens for them.`
+
+];
+
+let lessonIndex = 0;
+
+
+/* Change lesson */
+
+function nextLesson(){
+
+    document.getElementById("lesson").innerHTML =
+        lessons[lessonIndex];
+
+    lessonIndex++;
+
+    if(lessonIndex >= lessons.length){
+        lessonIndex = 0;
+    }
+}
+
+nextLesson();
+
+
+
+/* ----------------------------------------------------
+Generate drum sounds using the Web Audio API.
+No sound files required.
+---------------------------------------------------- */
+
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audio = new AudioContext();
+
+function beep(freq,time){
+
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+
+    osc.frequency.value = freq;
+    osc.type="square";
+
+    osc.connect(gain);
+    gain.connect(audio.destination);
+
+    gain.gain.setValueAtTime(.2,audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audio.currentTime+time
+    );
+
+    osc.start();
+    osc.stop(audio.currentTime+time);
+
+}
+
+/* Different drum sounds */
+
+function play(key){
+
+    switch(key){
+
+        case "a":
+            beep(90,.35);
+            break;
+
+        case "s":
+            beep(220,.12);
+            break;
+
+        case "d":
+            beep(700,.05);
+            break;
+
+        case "f":
+            beep(170,.25);
+            break;
+
+        case "g":
+            beep(350,.08);
+            break;
+
+        case "h":
+            beep(500,.18);
+            break;
+
+        default:
+            return;
+    }
+
+    nextLesson();
+
+    const pad=document.querySelector(`[data-key="${key}"]`);
+
+    if(!pad) return;
+
+    pad.classList.add("playing");
+
+    setTimeout(()=>{
+        pad.classList.remove("playing");
+    },100);
+
+}
+
+
+/* Mouse clicks */
+
+document.querySelectorAll(".pad").forEach(button=>{
+
+    button.addEventListener("click",()=>{
+
+        play(button.dataset.key);
+
+    });
+
+});
+
+
+/* Keyboard */
+
+document.addEventListener("keydown",(event)=>{
+
+    if(audio.state==="suspended"){
+        audio.resume();
+    }
+
+    play(event.key.toLowerCase());
+
+});
+
+</script>
+
+</body>
+</html>
