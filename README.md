@@ -1,6 +1,3 @@
-# sensor_demo
-
-## subtitle
-
-* item 1 
-* item 2
+# sensor net demo page 
+## Notes 
+we want to look at the sensors on a smart phone
