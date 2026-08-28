@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My First Website</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 40px;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 700px;
+            margin: auto;
+            box-shadow: 0 0 10px lightgray;
+        }
+
+        h1 {
+            color: steelblue;
+        }
+
+        button {
+            padding: 10px 15px;
+            background: steelblue;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: dodgerblue;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Welcome to My Website!</h1>
+
+    <p>
+        This is a paragraph. HTML is used to create the structure of a webpage.
+    </p>
+
+    <h2>Things I Like</h2>
+
+    <ul>
+        <li>Programming</li>
+        <li>Music</li>
+        <li>Pizza 🍕</li>
+    </ul>
+
+    <h2>My Favorite Website</h2>
+
+    <p>
+        <a href="https://www.google.com" target="_blank">
+            Visit Google
+        </a>
+    </p>
+
+    <h2>An Image</h2>
+
+    <img
+        src="https://picsum.photos/400/200"
+        alt="Random picture"
+        width="400"
+    >
+
+    <h2>A Button</h2>
+
+    <button onclick="sayHello()">
+        Click Me!
+    </button>
+
+    <p id="message"></p>
+</div>
+
+<script>
+function sayHello() {
+    document.getElementById("message").textContent =
+        "Hello! You just ran some JavaScript.";
+}
+</script>
+
+</body>
+</html>
