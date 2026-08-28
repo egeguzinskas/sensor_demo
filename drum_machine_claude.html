@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RHYTHM 101 — Drum Machine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --chassis-hi:#3a352f;
+    --chassis-lo:#1a1714;
+    --panel:#0f0d0c;
+    --pad:#2a2621;
+    --pad-hi:#3d3830;
+    --amber:#ffb020;
+    --red:#ff4433;
+    --green:#5ee88f;
+    --cyan:#4fd3ff;
+    --lilac:#c792ea;
+    --lcd-bg:#a9c19f;
+    --lcd-bg-dark:#8fae82;
+    --lcd-text:#1c2b19;
+    --ink:#e9e2d6;
+    --ink-dim:#a89f92;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #2a2622 0%, #100e0c 60%),
+      #100e0c;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px 14px;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+  }
+
+  .chassis{
+    position:relative;
+    width:100%;
+    max-width:980px;
+    background:
+      repeating-linear-gradient(100deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px),
+      linear-gradient(160deg, var(--chassis-hi), var(--chassis-lo) 70%);
+    border-radius:22px;
+    padding:22px 22px 26px;
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,255,255,0.08),
+      inset 0 -2px 0 rgba(0,0,0,0.4);
+    border:1px solid #050403;
+  }
+
+  .rivet{
+    position:absolute;
+    width:9px;height:9px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #5c5347, #100e0c 75%);
+    box-shadow:0 1px 0 rgba(255,255,255,0.15), inset 0 1px 1px rgba(0,0,0,0.6);
+  }
+  .rivet.tl{top:12px;left:12px;} .rivet.tr{top:12px;right:12px;}
+  .rivet.bl{bottom:12px;left:12px;} .rivet.br{bottom:12px;right:12px;}
+
+  .brand{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding:2px 6px 16px;
+  }
+  .brand h1{
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    letter-spacing:3px;
+    font-size:22px;
+    margin:0;
+    color:var(--ink);
+    text-shadow:0 1px 0 rgba(0,0,0,0.6);
+  }
+  .brand h1 span{color:var(--amber);}
+  .brand small{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    letter-spacing:2px;
+    color:var(--ink-dim);
+  }
+
+  /* ---------- top control deck ---------- */
+  .deck{
+    display:grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap:14px;
+    margin-bottom:18px;
+  }
+  @media (max-width:720px){ .deck{grid-template-columns:1fr;} }
+
+  .lcd-panel{
+    background:var(--panel);
+    border-radius:12px;
+    padding:10px;
+    box-shadow:inset 0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1px #000;
+  }
+  .lcd{
+    position:relative;
+    background:linear-gradient(160deg, var(--lcd-bg), var(--lcd-bg-dark));
+    border-radius:6px;
+    padding:12px 14px;
+    min-height:132px;
+    overflow:hidden;
+    box-shadow:inset 0 0 12px rgba(0,0,0,0.35);
+  }
+  .lcd::after{
+    content:"";
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+    mix-blend-mode:multiply;
+  }
+  .lcd-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:'Space Mono',monospace;
+    color:var(--lcd-text);
+    font-size:11px;
+    letter-spacing:1px;
+    margin-bottom:6px;
+    opacity:0.85;
+  }
+  .lcd-title{
+    font-family:'Space Mono',monospace;
+    font-weight:700;
+    font-size:15px;
+    color:var(--lcd-text);
+    letter-spacing:1px;
+    margin:0 0 6px;
+  }
+  .lcd-body{
+    font-family:'Space Mono',monospace;
+    font-size:12.5px;
+    line-height:1.55;
+    color:var(--lcd-text);
+    min-height:64px;
+  }
+  .lcd-body .cursor{
+    display:inline-block;
+    width:7px;height:12px;
+    background:var(--lcd-text);
+    margin-left:2px;
+    vertical-align:-2px;
+    animation:blink 1s steps(1) infinite;
+  }
+  @keyframes blink{50%{opacity:0;}}
+
+  .lesson-nav{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .lesson-nav .count{
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-right:auto;
+  }
+
+  /* ---------- transport / knobs ---------- */
+  .transport{
+    background:var(--panel);
+    border-radius:12px;
+    padding:14px;
+    box-shadow:inset 0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1px #000;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    justify-content:center;
+  }
+  .row-flex{display:flex; align-items:center; gap:12px;}
+
+  .btn{
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    letter-spacing:1.5px;
+    font-size:13px;
+    color:var(--ink);
+    background:linear-gradient(180deg, #423c34, #26221d);
+    border:1px solid #060504;
+    border-radius:8px;
+    padding:10px 14px;
+    cursor:pointer;
+    box-shadow:0 2px 0 #060504, inset 0 1px 0 rgba(255,255,255,0.08);
+    transition:transform .05s ease;
+    user-select:none;
+  }
+  .btn:hover{filter:brightness(1.12);}
+  .btn:active{transform:translateY(2px); box-shadow:0 0 0 #060504;}
+  .btn:focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
+  .btn.small{padding:7px 10px; font-size:11px;}
+  .btn.play{background:linear-gradient(180deg,#3a6b4a,#1e3a27); color:#d8ffe4;}
+  .btn.play.active{background:linear-gradient(180deg,#c94a3a,#7a281e); color:#ffe6e0;}
+  .btn.ghost{background:transparent; box-shadow:none; border:1px solid #4a443b; color:var(--ink-dim);}
+  .btn.ghost:hover{color:var(--ink); border-color:#6a6255;}
+
+  .tempo-block{flex:1;}
+  .tempo-label{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-dim);
+    letter-spacing:1.5px;
+    display:flex; justify-content:space-between;
+    margin-bottom:4px;
+  }
+  .tempo-label b{color:var(--amber); font-size:13px;}
+  input[type=range]{
+    -webkit-appearance:none;
+    width:100%;
+    height:4px;
+    border-radius:3px;
+    background:#000;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,0.8);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:15px;height:15px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffd27a, var(--amber) 70%);
+    border:1px solid #7a4e10;
+    cursor:pointer;
+    margin-top:-6px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.6);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:15px;height:15px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffd27a, var(--amber) 70%);
+    border:1px solid #7a4e10; cursor:pointer;
+  }
+
+  .master-block{display:flex; align-items:center; gap:10px;}
+  .master-block label{font-family:'Space Mono',monospace; font-size:10px; color:var(--ink-dim); letter-spacing:1px; width:52px;}
+
+  /* ---------- sequencer ---------- */
+  .sequencer{
+    background:var(--panel);
+    border-radius:12px;
+    padding:14px 12px;
+    box-shadow:inset 0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1px #000;
+  }
+
+  .beat-ruler{
+    display:grid;
+    grid-template-columns: 92px 48px 1fr;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .beat-ruler .steps-ruler{
+    display:grid;
+    grid-template-columns:repeat(16,1fr);
+    gap:4px;
+  }
+  .beat-ruler .steps-ruler span{
+    text-align:center;
+    font-family:'Space Mono',monospace;
+    font-size:9px;
+    color:var(--ink-dim);
+  }
+  .beat-ruler .steps-ruler span.beat{color:var(--amber); font-weight:700;}
+
+  .track-row{
+    display:grid;
+    grid-template-columns: 92px 48px 1fr;
+    gap:8px;
+    align-items:center;
+    padding:5px 0;
+  }
+  .track-label{
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:1px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .track-label .dot{
+    width:8px;height:8px;border-radius:50%;
+    box-shadow:0 0 6px currentColor;
+  }
+  .mute-btn{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    width:34px;height:24px;
+    border-radius:5px;
+    border:1px solid #060504;
+    background:linear-gradient(180deg,#3a352e,#221f1a);
+    color:var(--ink-dim);
+    cursor:pointer;
+  }
+  .mute-btn.muted{background:linear-gradient(180deg,#7a2e26,#4a1a15); color:#ffd9d2; border-color:#2a0f0a;}
+
+  .steps{
+    display:grid;
+    grid-template-columns:repeat(16,1fr);
+    gap:4px;
+  }
+  .step{
+    aspect-ratio:1/1;
+    border-radius:5px;
+    background:linear-gradient(180deg, var(--pad-hi), var(--pad));
+    border:1px solid #050403;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -2px 3px rgba(0,0,0,0.4);
+    cursor:pointer;
+    position:relative;
+    min-width:0;
+  }
+  .step.beatline{ box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -2px 3px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.06);}
+  .step:hover{filter:brightness(1.2);}
+  .step:focus-visible{outline:2px solid var(--cyan); outline-offset:1px;}
+  .step.on{ box-shadow:0 0 8px 1px currentColor, inset 0 1px 0 rgba(255,255,255,0.3); }
+  .step.playing{ outline:2px solid #fff8; outline-offset:1px; }
+  .step.newhit::after{
+    content:"";
+    position:absolute; inset:-3px;
+    border-radius:7px;
+    border:2px solid var(--green);
+    animation:pulseNew 1.4s ease-out 3;
+  }
+  @keyframes pulseNew{
+    0%{opacity:1; transform:scale(1);}
+    100%{opacity:0; transform:scale(1.25);}
+  }
+
+  .vol-cell{padding:0 2px;}
+
+  .footer-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:16px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .legend{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-dim);
+    letter-spacing:0.5px;
+  }
+
+  @media (max-width:640px){
+    .beat-ruler, .track-row{grid-template-columns:64px 34px 1fr;}
+    .track-label{font-size:11px;}
+    .brand h1{font-size:17px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="chassis">
+  <div class="rivet tl"></div><div class="rivet tr"></div>
+  <div class="rivet bl"></div><div class="rivet br"></div>
+
+  <div class="brand">
+    <h1>RHYTHM<span>101</span></h1>
+    <small>SYNTHESIZED DRUM MACHINE &amp; GROOVE TUTOR</small>
+  </div>
+
+  <div class="deck">
+    <div class="lcd-panel">
+      <div class="lcd">
+        <div class="lcd-head">
+          <span id="lcdMode">LESSON MODE</span>
+          <span id="lcdTempoTag">92 BPM</span>
+        </div>
+        <div class="lcd-title" id="lcdTitle">Loading…</div>
+        <div class="lcd-body" id="lcdBody"></div>
+      </div>
+      <div class="lesson-nav">
+        <button class="btn small ghost" id="prevLesson">◀ PREV</button>
+        <button class="btn small ghost" id="nextLesson">NEXT ▶</button>
+        <span class="count" id="lessonCount">Lesson 1 / 7</span>
+        <button class="btn small" id="freeJam">FREE JAM</button>
+        <button class="btn small ghost" id="resetPattern">CLEAR</button>
+      </div>
+    </div>
+
+    <div class="transport">
+      <div class="row-flex">
+        <button class="btn play" id="playBtn">▶ PLAY</button>
+        <button class="btn ghost small" id="loadExample">LOAD LESSON PATTERN</button>
+      </div>
+      <div class="tempo-block">
+        <div class="tempo-label"><span>TEMPO</span><b id="tempoVal">92</b></div>
+        <input type="range" id="tempoSlider" min="60" max="180" value="92">
+      </div>
+      <div class="master-block">
+        <label>MASTER</label>
+        <input type="range" id="masterVol" min="0" max="100" value="80">
+      </div>
+    </div>
+  </div>
+
+  <div class="sequencer">
+    <div class="beat-ruler">
+      <div></div><div></div>
+      <div class="steps-ruler" id="stepsRuler"></div>
+    </div>
+    <div id="tracksWrap"></div>
+  </div>
+
+  <div class="footer-row">
+    <div class="legend">CLICK PADS TO PLACE HITS · GREEN RING = WHAT'S NEW THIS LESSON</div>
+    <div class="legend">16-STEP · SYNTHESIZED AUDIO · NO SAMPLES</div>
+  </div>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+const TRACKS = [
+  {id:'kick',  name:'KICK',    color:'#ff4433'},
+  {id:'snare', name:'SNARE',   color:'#ffb020'},
+  {id:'clap',  name:'CLAP',    color:'#ff8c42'},
+  {id:'chat',  name:'CL HAT',  color:'#5ee88f'},
+  {id:'ohat',  name:'OP HAT',  color:'#4fd3ff'},
+  {id:'tom',   name:'TOM',     color:'#c792ea'},
+];
+const STEPS = 16;
+
+function empty(){ return new Array(STEPS).fill(0); }
+function fromHits(hits){ const a = empty(); hits.forEach(i=>a[i]=1); return a; }
+
+const LESSONS = [
+  {
+    title:"1. The Backbeat",
+    tempo:92,
+    pattern:{ kick:[0,8], snare:[4,12] },
+    desc:"Every groove starts here. The kick lands on beats 1 and 3 -- the floor you stand on. The snare answers on 2 and 4. That's the backbeat, and it's underneath nearly every rock, pop and funk song ever recorded.",
+    tip:"TIP: tap your foot on the kick, clap your hands on the snare."
+  },
+  {
+    title:"2. Keeping Time",
+    tempo:96,
+    pattern:{ kick:[0,8], snare:[4,12], chat:[0,2,4,6,8,10,12,14] },
+    desc:"The hi-hat divides each beat in two, giving the groove its pulse. Playing steady 8th notes glues the kick and snare together into one moving thing instead of two separate hits.",
+    tip:"TIP: the hat lines up exactly on every beat marker AND every gap between."
+  },
+  {
+    title:"3. Sixteenth-Note Feel",
+    tempo:96,
+    pattern:{ kick:[0,8], snare:[4,12], chat:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] },
+    desc:"Switch the hi-hat to every single 16th note and the groove gets busier and more driving. This faster subdivision is the engine behind funk, R&B and modern pop production.",
+    tip:"TIP: try lowering the hi-hat volume slightly so it doesn't fight the backbeat."
+  },
+  {
+    title:"4. Open Hat Accents",
+    tempo:100,
+    pattern:{ kick:[0,8], snare:[4,12], chat:[0,2,4,8,10,12], ohat:[6,14] },
+    desc:"Swap a couple of closed hi-hats for open ones on the off-beats -- the 'and' of 2 and 4 -- and you get that classic disco / funk 'chick' accent that rings out between hits.",
+    tip:"TIP: an open hi-hat naturally sustains until it's choked by the next hit -- that's real hi-hat behaviour."
+  },
+  {
+    title:"5. Boom Bap",
+    tempo:90,
+    pattern:{ kick:[0,6,10], snare:[4,12], clap:[4,12], chat:[0,2,6,8,10,14] },
+    desc:"Classic 90s hip-hop: the kick skips slightly ahead of the grid, creating anticipation before it snaps back for the snare. Layering a clap under the snare thickens the backbeat.",
+    tip:"TIP: this lazy, syncopated kick placement is the signature of boom-bap production."
+  },
+  {
+    title:"6. Four on the Floor",
+    tempo:124,
+    pattern:{ kick:[0,4,8,12], clap:[4,12], ohat:[2,6,10,14] },
+    desc:"House and dance music put the kick on every single beat -- 'four on the floor.' Paired with open hi-hats in the gaps, it creates the relentless, danceable pulse of the genre.",
+    tip:"TIP: the open hat rings out exactly in the space between kicks -- that space is what makes people move."
+  },
+  {
+    title:"7. The Fill",
+    tempo:96,
+    pattern:{ kick:[0,8], snare:[4], chat:[0,2,4,6,8,10], tom:[12,13,14,15] },
+    desc:"A fill breaks the pattern to signal a change is coming, usually at the end of a phrase. Marching toms through the last four steps announces that the next section is about to start.",
+    tip:"TIP: build a two-bar idea -- groove for bar one, fill for bar two -- then loop it."
+  },
+];
+
+/* ===================== STATE ===================== */
+let pattern = {};
+let volumes = {};
+let mutes = {};
+TRACKS.forEach(t=>{ pattern[t.id]=empty(); volumes[t.id]=0.8; mutes[t.id]=false; });
+
+let lessonIndex = 0;
+let freeMode = false;
+let masterVol = 0.8;
+let tempo = 92;
+
+/* ===================== AUDIO ENGINE ===================== */
+let audioCtx = null;
+let noiseBuf = null;
+function ensureAudio(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const len = audioCtx.sampleRate * 2;
+    noiseBuf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = Math.random()*2-1;
+  }
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function gainEnv(ctx, time, peak, attack, decay){
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.linearRampToValueAtTime(peak, time+attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, time+attack+decay);
+  return g;
+}
+
+function playKick(time, vol){
+  const ctx = audioCtx;
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(150, time);
+  osc.frequency.exponentialRampToValueAtTime(42, time+0.14);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time+0.28);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(time); osc.stop(time+0.3);
+
+  const click = ctx.createOscillator();
+  click.type='square'; click.frequency.setValueAtTime(700, time);
+  const cg = ctx.createGain();
+  cg.gain.setValueAtTime(vol*0.4, time);
+  cg.gain.exponentialRampToValueAtTime(0.001, time+0.02);
+  click.connect(cg).connect(ctx.destination);
+  click.start(time); click.stop(time+0.03);
+}
+
+function playSnare(time, vol){
+  const ctx = audioCtx;
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuf;
+  const bp = ctx.createBiquadFilter();
+  bp.type='highpass'; bp.frequency.value = 900;
+  const g = gainEnv(ctx, time, vol, 0.001, 0.16);
+  src.connect(bp).connect(g).connect(ctx.destination);
+  src.start(time); src.stop(time+0.2);
+
+  const osc = ctx.createOscillator();
+  osc.type='triangle'; osc.frequency.setValueAtTime(190, time);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(vol*0.6, time);
+  og.gain.exponentialRampToValueAtTime(0.001, time+0.12);
+  osc.connect(og).connect(ctx.destination);
+  osc.start(time); osc.stop(time+0.13);
+}
+
+function playClap(time, vol){
+  const ctx = audioCtx;
+  [0, 0.012, 0.024].forEach((off,i)=>{
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type='bandpass'; bp.frequency.value = 1200; bp.Q.value = 1.2;
+    const g = gainEnv(ctx, time+off, vol*0.8, 0.001, i===2?0.15:0.03);
+    src.connect(bp).connect(g).connect(ctx.destination);
+    src.start(time+off); src.stop(time+off+0.16);
+  });
+}
+
+function playHat(time, vol, open){
+  const ctx = audioCtx;
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuf;
+  const hp = ctx.createBiquadFilter();
+  hp.type='highpass'; hp.frequency.value = 7000;
+  const dur = open ? 0.32 : 0.06;
+  const g = gainEnv(ctx, time, vol*0.6, 0.001, dur);
+  src.connect(hp).connect(g).connect(ctx.destination);
+  src.start(time); src.stop(time+dur+0.02);
+}
+
+function playTom(time, vol){
+  const ctx = audioCtx;
+  const osc = ctx.createOscillator();
+  osc.type='sine';
+  osc.frequency.setValueAtTime(180, time);
+  osc.frequency.exponentialRampToValueAtTime(90, time+0.2);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time+0.28);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(time); osc.stop(time+0.3);
+}
+
+function trigger(id, time, vol){
+  if(vol<=0) return;
+  if(id==='kick') playKick(time, vol);
+  else if(id==='snare') playSnare(time, vol);
+  else if(id==='clap') playClap(time, vol);
+  else if(id==='chat') playHat(time, vol, false);
+  else if(id==='ohat') playHat(time, vol, true);
+  else if(id==='tom') playTom(time, vol);
+}
+
+/* ===================== SCHEDULER ===================== */
+let currentStep = 0;
+let nextNoteTime = 0.0;
+let isPlaying = false;
+let timerID = null;
+const lookahead = 25.0;
+const scheduleAheadTime = 0.12;
+let stepQueue = [];
+
+function nextNote(){
+  const secondsPerBeat = 60.0/tempo;
+  nextNoteTime += 0.25*secondsPerBeat;
+  currentStep = (currentStep+1)%STEPS;
+}
+
+function scheduleStep(step, time){
+  stepQueue.push({step, time});
+  TRACKS.forEach(t=>{
+    if(pattern[t.id][step] && !mutes[t.id]){
+      trigger(t.id, time, volumes[t.id]*masterVol);
+    }
+  });
+}
+
+function schedulerLoop(){
+  while(nextNoteTime < audioCtx.currentTime + scheduleAheadTime){
+    scheduleStep(currentStep, nextNoteTime);
+    nextNote();
+  }
+  timerID = setTimeout(schedulerLoop, lookahead);
+}
+
+let lastDrawnStep = -1;
+function draw(){
+  requestAnimationFrame(draw);
+  if(!audioCtx) return;
+  let s = -1;
+  while(stepQueue.length && stepQueue[0].time <= audioCtx.currentTime){
+    s = stepQueue.shift().step;
+  }
+  if(s !== -1 && s !== lastDrawnStep){
+    lastDrawnStep = s;
+    document.querySelectorAll('.step.playing').forEach(el=>el.classList.remove('playing'));
+    if(isPlaying){
+      document.querySelectorAll(`.step[data-step="${s}"]`).forEach(el=>el.classList.add('playing'));
+    }
+  }
+}
+requestAnimationFrame(draw);
+
+function startPlayback(){
+  ensureAudio();
+  isPlaying = true;
+  currentStep = 0;
+  nextNoteTime = audioCtx.currentTime + 0.05;
+  stepQueue = [];
+  schedulerLoop();
+  playBtn.textContent = '■ STOP';
+  playBtn.classList.add('active');
+}
+function stopPlayback(){
+  isPlaying = false;
+  clearTimeout(timerID);
+  document.querySelectorAll('.step.playing').forEach(el=>el.classList.remove('playing'));
+  playBtn.textContent = '▶ PLAY';
+  playBtn.classList.remove('active');
+}
+
+/* ===================== UI BUILD ===================== */
+const stepsRuler = document.getElementById('stepsRuler');
+for(let i=0;i<STEPS;i++){
+  const s = document.createElement('span');
+  s.textContent = (i%4===0) ? String(i/4+1) : '·';
+  if(i%4===0) s.classList.add('beat');
+  stepsRuler.appendChild(s);
+}
+
+const tracksWrap = document.getElementById('tracksWrap');
+TRACKS.forEach(t=>{
+  const row = document.createElement('div');
+  row.className = 'track-row';
+
+  const label = document.createElement('div');
+  label.className = 'track-label';
+  label.style.color = t.color;
+  label.innerHTML = `<span class="dot" style="background:${t.color}; color:${t.color}"></span>${t.name}`;
+
+  const mute = document.createElement('button');
+  mute.className = 'mute-btn';
+  mute.textContent = 'M';
+  mute.title = 'Mute '+t.name;
+  mute.addEventListener('click', ()=>{
+    mutes[t.id] = !mutes[t.id];
+    mute.classList.toggle('muted', mutes[t.id]);
+  });
+
+  const stepsDiv = document.createElement('div');
+  stepsDiv.className = 'steps';
+  for(let i=0;i<STEPS;i++){
+    const btn = document.createElement('button');
+    btn.className = 'step' + (i%4===0 ? ' beatline':'');
+    btn.dataset.step = i;
+    btn.dataset.track = t.id;
+    btn.style.color = t.color;
+    btn.setAttribute('aria-pressed','false');
+    btn.addEventListener('click', ()=>{
+      pattern[t.id][i] = pattern[t.id][i] ? 0 : 1;
+      renderTrackStep(t.id, i);
+      if(!audioCtx) ensureAudio();
+      if(pattern[t.id][i]) trigger(t.id, audioCtx.currentTime, volumes[t.id]*masterVol);
+    });
+    stepsDiv.appendChild(btn);
+  }
+
+  row.appendChild(label);
+  row.appendChild(mute);
+  row.appendChild(stepsDiv);
+  tracksWrap.appendChild(row);
+});
+
+function renderTrackStep(trackId, i){
+  const el = document.querySelector(`.step[data-track="${trackId}"][data-step="${i}"]`);
+  const on = !!pattern[trackId][i];
+  el.classList.toggle('on', on);
+  el.setAttribute('aria-pressed', String(on));
+}
+function renderAll(){
+  TRACKS.forEach(t=>{ for(let i=0;i<STEPS;i++) renderTrackStep(t.id, i); });
+}
+
+/* ===================== LESSON / LCD LOGIC ===================== */
+const lcdTitle = document.getElementById('lcdTitle');
+const lcdBody = document.getElementById('lcdBody');
+const lcdMode = document.getElementById('lcdMode');
+const lcdTempoTag = document.getElementById('lcdTempoTag');
+const lessonCount = document.getElementById('lessonCount');
+
+let typeTimer = null;
+function typeText(el, text, cb){
+  clearInterval(typeTimer);
+  el.innerHTML = '';
+  let i = 0;
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  typeTimer = setInterval(()=>{
+    el.textContent = text.slice(0,i);
+    el.appendChild(cursor);
+    i++;
+    if(i > text.length){
+      clearInterval(typeTimer);
+      if(cb) cb();
+    }
+  }, 12);
+}
+
+function patternFromLesson(def){
+  const p = {};
+  TRACKS.forEach(t=>{ p[t.id] = fromHits(def.pattern[t.id]||[]); });
+  return p;
+}
+
+function applyPattern(newPattern, markNew){
+  TRACKS.forEach(t=>{
+    for(let i=0;i<STEPS;i++){
+      const was = pattern[t.id][i];
+      const now = newPattern[t.id][i];
+      pattern[t.id][i] = now;
+      renderTrackStep(t.id, i);
+      const el = document.querySelector(`.step[data-track="${t.id}"][data-step="${i}"]`);
+      el.classList.remove('newhit');
+      if(markNew && now && !was){
+        void el.offsetWidth;
+        el.classList.add('newhit');
+      }
+    }
+  });
+}
+
+function loadLesson(idx, opts={}){
+  lessonIndex = ((idx % LESSONS.length) + LESSONS.length) % LESSONS.length;
+  freeMode = false;
+  const def = LESSONS[lessonIndex];
+  const prev = LESSONS[lessonIndex-1] ? patternFromLesson(LESSONS[lessonIndex-1]) : null;
+  const target = patternFromLesson(def);
+
+  applyPattern(target, !!prev && opts.mark !== false);
+
+  tempo = def.tempo;
+  tempoSlider.value = tempo;
+  tempoVal.textContent = tempo;
+  lcdTempoTag.textContent = tempo + ' BPM';
+  lcdMode.textContent = 'LESSON MODE';
+  lessonCount.textContent = `Lesson ${lessonIndex+1} / ${LESSONS.length}`;
+
+  lcdTitle.textContent = def.title;
+  typeText(lcdBody, def.desc + '\n\n' + def.tip);
+}
+
+document.getElementById('prevLesson').addEventListener('click', ()=>loadLesson(lessonIndex-1));
+document.getElementById('nextLesson').addEventListener('click', ()=>loadLesson(lessonIndex+1));
+document.getElementById('loadExample').addEventListener('click', ()=>{
+  if(freeMode) return;
+  loadLesson(lessonIndex, {mark:false});
+  if(!isPlaying) startPlayback();
+});
+document.getElementById('resetPattern').addEventListener('click', ()=>{
+  const clear = {}; TRACKS.forEach(t=>clear[t.id]=empty());
+  applyPattern(clear, false);
+});
+document.getElementById('freeJam').addEventListener('click', ()=>{
+  freeMode = true;
+  lcdMode.textContent = 'FREE JAM';
+  lessonCount.textContent = 'sandbox mode';
+  lcdTitle.textContent = 'Build your own';
+  typeText(lcdBody, "You're off the rails now. Click any pad to place a hit, click again to remove it. Try combining ideas from earlier lessons -- a four-on-the-floor kick with a boom-bap hi-hat, or your own fill on the last four steps.");
+});
+
+/* ===================== TRANSPORT ===================== */
+const playBtn = document.getElementById('playBtn');
+playBtn.addEventListener('click', ()=>{
+  if(isPlaying) stopPlayback();
+  else startPlayback();
+});
+
+const tempoSlider = document.getElementById('tempoSlider');
+const tempoVal = document.getElementById('tempoVal');
+tempoSlider.addEventListener('input', ()=>{
+  tempo = parseInt(tempoSlider.value,10);
+  tempoVal.textContent = tempo;
+  lcdTempoTag.textContent = tempo + ' BPM';
+});
+
+const masterVolSlider = document.getElementById('masterVol');
+masterVolSlider.addEventListener('input', ()=>{
+  masterVol = parseInt(masterVolSlider.value,10)/100;
+});
+
+/* per-track volume sliders injected into label column width via steps grid header (compact: reuse mute col + add small fader under label) */
+/* Add a slim volume slider under each track label for a hardware-fader feel */
+document.querySelectorAll('.track-row').forEach((row, idx)=>{
+  const t = TRACKS[idx];
+  const label = row.firstChild;
+  const fader = document.createElement('input');
+  fader.type = 'range'; fader.min=0; fader.max=100; fader.value=80;
+  fader.style.marginTop = '4px';
+  fader.addEventListener('input', ()=>{ volumes[t.id] = fader.value/100; });
+  label.appendChild(document.createElement('br'));
+  label.appendChild(fader);
+});
+
+/* ===================== INIT ===================== */
+renderAll();
+loadLesson(0, {mark:false});
+</script>
+</body>
+</html>
