@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beat Lab - Learn Drum Machine</title>
+  <style>
+    :root {
+      --bg: #1a1a24;
+      --card-bg: #242438;
+      --accent: #ff4757;
+      --active: #2ed573;
+      --text: #ffffff;
+      --subtext: #a4b0be;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background: var(--card-bg);
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      max-width: 800px;
+      width: 100%;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    h1 { font-size: 1.8rem; margin-bottom: 8px; color: var(--accent); }
+    p { color: var(--subtext); font-size: 0.95rem; }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+
+    button, select {
+      background: #2f3542;
+      color: var(--text);
+      border: 1px solid #57606f;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    button:hover, select:hover { background: #57606f; }
+
+    #play-btn {
+      background: var(--accent);
+      border: none;
+      min-width: 100px;
+    }
+
+    #play-btn.playing { background: var(--active); }
+
+    .tempo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 80px repeat(16, 1fr);
+      gap: 6px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    .row-label {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 0.85rem;
+      color: var(--subtext);
+    }
+
+    .step {
+      aspect-ratio: 1;
+      background: #2f3542;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .step:nth-child(4n+2) { background: #3a404d; } /* Accent beat markers */
+
+    .step.active {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .step.guide {
+      border: 2px solid var(--active);
+    }
+
+    .step.current {
+      opacity: 0.6;
+      transform: scale(0.95);
+    }
+
+    .info-card {
+      background: rgba(0,0,0,0.2);
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid var(--accent);
+    }
+
+    .info-card h3 { margin-bottom: 5px; font-size: 1rem; }
+    .info-card p { font-size: 0.85rem; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>BEAT LAB: Interactive Drum Machine</h1>
+    <p>Select a lesson pattern below, hit play, or toggle pads to build your own groove!</p>
+  </header>
+
+  <div class="controls">
+    <button id="play-btn">Play</button>
+    
+    <div class="tempo-container">
+      <label for="bpm">BPM: <span id="bpm-val">100</span></label>
+      <input type="range" id="bpm" min="60" max="160" value="100">
+    </div>
+
+    <select id="lesson-select">
+      <option value="basic">Lesson 1: Basic Rock Groove</option>
+      <option value="four">Lesson 2: Four-on-the-Floor</option>
+      <option value="syncopated">Lesson 3: Syncopated Funky Beat</option>
+      <option value="clear">Clear All (Custom Pattern)</option>
+    </select>
+  </div>
+
+  <div class="grid" id="sequencer-grid"></div>
+
+  <div class="info-card">
+    <h3 id="lesson-title">Lesson 1: Basic Rock Groove</h3>
+    <p id="lesson-desc">The foundation of rock music. The Kick hits on beats 1 and 3, while the Snare anchors beats 2 and 4. The Hi-Hat maintains a steady 8th-note pulse (every 2 steps).</p>
+  </div>
+</div>
+
+<script>
+  // Web Audio Context Setup
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Synthetic Drum Sounds (No external files needed)
+  function playSound(type) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+
+    if (type === 'kick') {
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.5);
+      gain.gain.setValueAtTime(1, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else if (type === 'snare') {
+      // Noise buffer for snare crack
+      const bufferSize = audioCtx.sampleRate * 0.2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+
+      const whiteNoise = audioCtx.createBufferSource();
+      whiteNoise.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 1000;
+
+      whiteNoise.connect(filter);
+      filter.connect(gain);
+      gain.gain.setValueAtTime(0.8, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      
+      whiteNoise.start(now);
+      whiteNoise.stop(now + 0.2);
+    } else if (type === 'hihat') {
+      // High frequency noise for metallic click
+      const bufferSize = audioCtx.sampleRate * 0.05;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+
+      const whiteNoise = audioCtx.createBufferSource();
+      whiteNoise.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 7000;
+
+      whiteNoise.connect(filter);
+      filter.connect(gain);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+      whiteNoise.start(now);
+      whiteNoise.stop(now + 0.05);
+    }
+  }
+
+  // App State
+  const tracks = ['Hi-Hat', 'Snare', 'Kick'];
+  const soundKeys = ['hihat', 'snare', 'kick'];
+  const stepsCount = 16;
+  let isPlaying = false;
+  let currentStep = 0;
+  let tempo = 100;
+  let timerId = null;
+
+  // Grid Data [trackIndex][stepIndex]
+  let gridState = Array(3).fill(null).map(() => Array(stepsCount).fill(false));
+
+  // Lessons
+  const lessons = {
+    basic: {
+      title: "Lesson 1: Basic Rock Groove",
+      desc: "The foundation of modern music. The Kick hits on beats 1 and 3, while the Snare anchors beats 2 and 4. The Hi-Hat keeps steady 8th-note time.",
+      pattern: [
+        [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Hi-Hat
+        [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], // Snare
+        [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]  // Kick
+      ]
+    },
+    four: {
+      title: "Lesson 2: Four-on-the-Floor",
+      desc: "Essential for Dance, EDM, and Disco music. The Kick drum plays on every main beat (1, 2, 3, 4), creating an irresistible driving rhythm.",
+      pattern: [
+        [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], // Hi-Hat
+        [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], // Snare
+        [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0]  // Kick
+      ]
+    },
+    syncopated: {
+      title: "Lesson 3: Syncopated Funky Beat",
+      desc: "Syncopation places kicks off the main beats (on the 'and' or 'e' of beats), creating groove and movement typical in Funk and Hip-Hop.",
+      pattern: [
+        [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Hi-Hat
+        [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], // Snare
+        [1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0]  // Kick
+      ]
+    },
+    clear: {
+      title: "Custom Sandbox Mode",
+      desc: "The grid is clear! Tap any pads to build your own custom rhythm from scratch.",
+      pattern: [
+        Array(16).fill(0),
+        Array(16).fill(0),
+        Array(16).fill(0)
+      ]
+    }
+  };
+
+  // DOM Elements
+  const gridEl = document.getElementById('sequencer-grid');
+  const playBtn = document.getElementById('play-btn');
+  const bpmInput = document.getElementById('bpm');
+  const bpmVal = document.getElementById('bpm-val');
+  const lessonSelect = document.getElementById('lesson-select');
+  const lessonTitle = document.getElementById('lesson-title');
+  const lessonDesc = document.getElementById('lesson-desc');
+
+  // Render Grid UI
+  function createGrid() {
+    gridEl.innerHTML = '';
+    tracks.forEach((trackName, trackIdx) => {
+      const label = document.createElement('div');
+      label.className = 'row-label';
+      label.innerText = trackName;
+      gridEl.appendChild(label);
+
+      for (let stepIdx = 0; stepIdx < stepsCount; stepIdx++) {
+        const step = document.createElement('div');
+        step.className = 'step';
+        step.dataset.track = trackIdx;
+        step.dataset.step = stepIdx;
+
+        if (gridState[trackIdx][stepIdx]) {
+          step.classList.add('active');
+        }
+
+        step.addEventListener('click', () => {
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          gridState[trackIdx][stepIdx] = !gridState[trackIdx][stepIdx];
+          step.classList.toggle('active');
+          if (gridState[trackIdx][stepIdx]) playSound(soundKeys[trackIdx]);
+        });
+
+        gridEl.appendChild(step);
+      }
+    });
+  }
+
+  // Sequencer Logic
+  function runSequencer() {
+    const steps = document.querySelectorAll('.step');
+    
+    // Remove previous step visual highlight
+    steps.forEach(s => s.classList.remove('current'));
+
+    // Highlight current column steps & play active audio
+    tracks.forEach((_, trackIdx) => {
+      const stepIndex = currentStep;
+      const stepEl = document.querySelector(`.step[data-track="${trackIdx}"][data-step="${stepIndex}"]`);
+      if (stepEl) stepEl.classList.add('current');
+
+      if (gridState[trackIdx][stepIndex]) {
+        playSound(soundKeys[trackIdx]);
+      }
+    });
+
+    currentStep = (currentStep + 1) % stepsCount;
+  }
+
+  function togglePlay() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    if (isPlaying) {
+      clearInterval(timerId);
+      isPlaying = false;
+      playBtn.innerText = 'Play';
+      playBtn.classList.remove('playing');
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('current'));
+      currentStep = 0;
+    } else {
+      isPlaying = true;
+      playBtn.innerText = 'Pause';
+      playBtn.classList.add('playing');
+      const interval = (60 / tempo / 4) * 1000; // 16th note interval
+      timerId = setInterval(runSequencer, interval);
+    }
+  }
+
+  // Load Lesson Preset
+  function loadLesson(lessonKey) {
+    const lesson = lessons[lessonKey];
+    lessonTitle.innerText = lesson.title;
+    lessonDesc.innerText = lesson.desc;
+
+    // Deep copy pattern to state
+    gridState = lesson.pattern.map(row => [...row.map(val => Boolean(val))]);
+    createGrid();
+
+    if (isPlaying) {
+      togglePlay(); // Restart to resync
+      togglePlay();
+    }
+  }
+
+  // Event Listeners
+  playBtn.addEventListener('click', togglePlay);
+
+  bpmInput.addEventListener('input', (e) => {
+    tempo = e.target.value;
+    bpmVal.innerText = tempo;
+    if (isPlaying) {
+      clearInterval(timerId);
+      const interval = (60 / tempo / 4) * 1000;
+      timerId = setInterval(runSequencer, interval);
+    }
+  });
+
+  lessonSelect.addEventListener('change', (e) => {
+    loadLesson(e.target.value);
+  });
+
+  // Init
+  loadLesson('basic');
+</script>
+</body>
+</html>
